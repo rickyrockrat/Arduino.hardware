@@ -1,6 +1,6 @@
 /*
-  main.cpp - Main loop for Arduino sketches
-  Copyright (c) 2005-2013 Arduino Team.  All right reserved.
+  PluggableUSB.h
+  Copyright (c) 2015 Arduino LLC
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -17,36 +17,39 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <Arduino.h>
+#ifndef PUSB_h
+#define PUSB_h
 
-// Declared weak in Arduino.h to allow user redefinitions.
-int atexit(void (* /*func*/ )()) { return 0; }
-
-// Weak empty variant initialization function.
-// May be redefined by variant files.
-void initVariant() __attribute__((weak));
-void initVariant() { }
-
-void setupUSB() __attribute__((weak));
-void setupUSB() { }
-
-int main(void)
-{
-	init();
-
-	initVariant();
+#include "USBAPI.h"
+#include <stdint.h>
 
 #if defined(USBCON)
-	USBDevice.attach();
-#endif
-	
-	setup();
-    
-	for (;;) {
-		loop();
-		if (serialEventRun) serialEventRun();
-	}
-        
-	return 0;
-}
 
+typedef struct __attribute__((packed))
+{
+  bool (*setup)(USBSetup& setup, u8 i);
+  int (*getInterface)(u8* interfaceNum);
+  int (*getDescriptor)(int8_t t);
+  int8_t numEndpoints;
+  int8_t numInterfaces;
+  uint8_t *endpointType;
+} PUSBCallbacks;
+
+class PUSBListNode {
+public:
+  PUSBListNode *next = NULL;
+  PUSBCallbacks *cb;
+  PUSBListNode(PUSBCallbacks *ncb) {cb = ncb;}
+};
+
+int8_t PUSB_AddFunction(PUSBListNode *node, u8 *interface);
+
+int PUSB_GetInterface(u8* interfaceNum);
+
+int PUSB_GetDescriptor(int8_t t);
+
+bool PUSB_Setup(USBSetup& setup, u8 i);
+
+#endif
+
+#endif
